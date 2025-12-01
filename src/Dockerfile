@@ -9,6 +9,7 @@ COPY go.mod ./
 # Copy all source code (needed for go mod tidy to work)
 COPY *.go ./
 COPY static/ ./static/
+COPY locales/ ./locales/
 
 # Download dependencies and generate go.sum
 RUN go mod tidy && go mod download

@@ -1,0 +1,6 @@
+{
+    "title": "Starting Service...",
+    "heading": "Starting %s",
+    "message": "Please wait while we wake up the containers...",
+    "status": "This may take a few moments"
+}

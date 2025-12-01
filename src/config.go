@@ -17,6 +17,7 @@ type Config struct {
 	EndpointPrefix  string
 	ExclusionLabel  string
 	DockerHost      string
+	LoadingPageLang string
 }
 
 func getEnv(key, defaultValue string) string {
@@ -60,5 +61,6 @@ func LoadConfig() Config {
 		EndpointPrefix:           getEnv("ENDPOINT_PREFIX", "sleep-proxy"),
 		ExclusionLabel:           getEnv("EXCLUSION_LABEL", "sleep-proxy.exclude"),
 		DockerHost:               getEnv("DOCKER_HOST", ""),
+		LoadingPageLang:          getEnv("LOADING_PAGE_LANG", "fr"),
 	}
 }

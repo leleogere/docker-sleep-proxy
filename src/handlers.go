@@ -4,6 +4,8 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -13,6 +15,19 @@ import (
 
 //go:embed static/*
 var staticFiles embed.FS
+
+//go:embed locales/*
+var localeFiles embed.FS
+
+type PageData struct {
+	Title           string
+	Heading         string
+	Message         string
+	Status          string
+	CheckInterval   int
+	EndpointPrefix  string
+	IndicatorHTML   template.HTML
+}
 
 func processIconURL(icon string) string {
 	if len(icon) > 3 && icon[:3] == "sh:" {
@@ -58,7 +73,31 @@ func (sp *SleepProxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func loadTranslations(lang string) (map[string]string, error) {
+	data, err := localeFiles.ReadFile(fmt.Sprintf("locales/%s.json", lang))
+	if err != nil {
+		return nil, err
+	}
+	var translations map[string]string
+	if err := json.Unmarshal(data, &translations); err != nil {
+		return nil, err
+	}
+	return translations, nil
+}
+
 func (sp *SleepProxy) serveLoadingPage(w http.ResponseWriter, r *http.Request) {
+	// Load translations
+	translations, err := loadTranslations(sp.config.LoadingPageLang)
+	if err != nil {
+		log.Printf("Failed to load translations for %s: %v. Falling back to fr", sp.config.LoadingPageLang, err)
+		translations, err = loadTranslations("fr")
+		if err != nil {
+			log.Printf("Failed to load fallback translations: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	// Read the HTML template from static files
 	htmlContent, err := staticFiles.ReadFile("static/loading.html")
 	if err != nil {
@@ -67,8 +106,12 @@ func (sp *SleepProxy) serveLoadingPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Inject check interval and endpoint prefix as meta tags
-	checkIntervalMs := int(sp.config.CheckInterval.Milliseconds())
+	tmpl, err := template.New("loading").Parse(string(htmlContent))
+	if err != nil {
+		log.Printf("Failed to parse loading template: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	indicatorHTML := `<div class="spinner"></div>`
 	if sp.config.TargetServiceIcon != "" {
@@ -76,11 +119,21 @@ func (sp *SleepProxy) serveLoadingPage(w http.ResponseWriter, r *http.Request) {
 		indicatorHTML = fmt.Sprintf(`<img src="%s" class="service-icon" alt="Service Icon">`, iconURL)
 	}
 
-	html := fmt.Sprintf(string(htmlContent), checkIntervalMs, sp.config.EndpointPrefix, indicatorHTML, sp.config.TargetServiceDisplayName)
+	data := PageData{
+		Title:          translations["title"],
+		Heading:        fmt.Sprintf(translations["heading"], sp.config.TargetServiceDisplayName),
+		Message:        translations["message"],
+		Status:         translations["status"],
+		CheckInterval:  int(sp.config.CheckInterval.Milliseconds()),
+		EndpointPrefix: sp.config.EndpointPrefix,
+		IndicatorHTML:  template.HTML(indicatorHTML),
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Printf("Failed to execute template: %v", err)
+	}
 }
 
 func (sp *SleepProxy) handleProxy(w http.ResponseWriter, r *http.Request) {
