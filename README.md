@@ -85,6 +85,8 @@ All configuration is done via environment variables:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `TARGET_SERVICE` | ✅ Yes | - | Name of the Docker service to proxy to |
+| `TARGET_SERVICE_DISPLAY_NAME` | No | `TARGET_SERVICE` | Friendly name to display on loading page |
+| `TARGET_SERVICE_ICON` | No | - | Icon URL or `sh:appname` (see below) |
 | `TARGET_PORT` | ✅ Yes | - | Port of the target service |
 | `PROXY_PORT` | No | `8000` | Port the proxy listens on |
 | `SLEEP_TIMEOUT` | No | `86400` | Seconds of inactivity before stopping containers (24h default) |
@@ -93,7 +95,24 @@ All configuration is done via environment variables:
 | `EXCLUSION_LABEL` | No | `sleep-proxy.exclude` | Label to exclude containers from lifecycle management |
 | `DOCKER_HOST` | No | - | Docker host URL (e.g., `tcp://remote-docker:2375` for remote Docker or through proxy) |
 
-## Management Endpoints
+## Customizing Loading Page
+ 
+ You can customize the loading page with a friendly name and an icon.
+ 
+ ### Service Name
+ Set `TARGET_SERVICE_DISPLAY_NAME` to change the title from "Starting [TARGET_SERVICE]" to "Starting [Your Name]".
+ 
+ ### Service Icon
+ Set `TARGET_SERVICE_ICON` to display an icon instead of the default spinner.
+ 
+ **Supported formats:**
+ - **Direct URL**: `https://example.com/icon.png`
+ - **Selfh.st Icons**: Use `sh:` prefix to fetch from [selfh.st/icons](https://selfh.st/icons)
+   - `sh:bentopdf` -> Fetches Bentopdf SVG icon
+   - `sh:bentopdf.png` -> Fetches Bentopdf PNG icon
+   - `sh:bentopdf.webp` -> Fetches Bentopdf WebP icon
+ 
+ ## Management Endpoints
 
 The proxy exposes management endpoints at `/<ENDPOINT_PREFIX>/`:
 

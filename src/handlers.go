@@ -8,10 +8,30 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 )
 
 //go:embed static/*
 var staticFiles embed.FS
+
+func processIconURL(icon string) string {
+	if len(icon) > 3 && icon[:3] == "sh:" {
+		appName := icon[3:]
+		ext := "svg" // Default extension
+
+		if lastDotIndex := strings.LastIndex(appName, "."); lastDotIndex != -1 && lastDotIndex < len(appName)-1 {
+			potentialExt := appName[lastDotIndex+1:]
+			switch potentialExt {
+			case "png", "svg", "webp":
+				ext = potentialExt
+				appName = appName[:lastDotIndex]
+			}
+		}
+		
+		return fmt.Sprintf("https://cdn.jsdelivr.net/gh/selfhst/icons@master/%s/%s.%s", ext, appName, ext)
+	}
+	return icon
+}
 
 func (sp *SleepProxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 	// Update activity to prevent timeout during startup
@@ -41,7 +61,14 @@ func (sp *SleepProxy) serveLoadingPage(w http.ResponseWriter, r *http.Request) {
 
 	// Inject check interval and endpoint prefix as meta tags
 	checkIntervalMs := int(sp.config.CheckInterval.Milliseconds())
-	html := fmt.Sprintf(string(htmlContent), checkIntervalMs, sp.config.EndpointPrefix)
+
+	indicatorHTML := `<div class="spinner"></div>`
+	if sp.config.TargetServiceIcon != "" {
+		iconURL := processIconURL(sp.config.TargetServiceIcon)
+		indicatorHTML = fmt.Sprintf(`<img src="%s" class="service-icon" alt="Service Icon">`, iconURL)
+	}
+
+	html := fmt.Sprintf(string(htmlContent), checkIntervalMs, sp.config.EndpointPrefix, indicatorHTML, sp.config.TargetServiceDisplayName)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)

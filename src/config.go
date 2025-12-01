@@ -9,6 +9,8 @@ import (
 type Config struct {
 	ProxyPort       string
 	TargetService   string
+	TargetServiceDisplayName string
+	TargetServiceIcon        string
 	TargetPort      string
 	SleepTimeout    time.Duration
 	CheckInterval   time.Duration
@@ -48,13 +50,15 @@ func LoadConfig() Config {
 	checkIntervalSec := getEnvInt("CHECK_INTERVAL", 5)     // 5 seconds default
 
 	return Config{
-		ProxyPort:       getEnv("PROXY_PORT", "8000"),
-		TargetService:   targetService,
-		TargetPort:      targetPort,
-		SleepTimeout:    time.Duration(sleepTimeoutSec) * time.Second,
-		CheckInterval:   time.Duration(checkIntervalSec) * time.Second,
-		EndpointPrefix:  getEnv("ENDPOINT_PREFIX", "sleep-proxy"),
-		ExclusionLabel:  getEnv("EXCLUSION_LABEL", "sleep-proxy.exclude"),
-		DockerHost:      getEnv("DOCKER_HOST", ""),
+		ProxyPort:                getEnv("PROXY_PORT", "8000"),
+		TargetService:            targetService,
+		TargetServiceDisplayName: getEnv("TARGET_SERVICE_DISPLAY_NAME", targetService),
+		TargetServiceIcon:        getEnv("TARGET_SERVICE_ICON", ""),
+		TargetPort:               targetPort,
+		SleepTimeout:             time.Duration(sleepTimeoutSec) * time.Second,
+		CheckInterval:            time.Duration(checkIntervalSec) * time.Second,
+		EndpointPrefix:           getEnv("ENDPOINT_PREFIX", "sleep-proxy"),
+		ExclusionLabel:           getEnv("EXCLUSION_LABEL", "sleep-proxy.exclude"),
+		DockerHost:               getEnv("DOCKER_HOST", ""),
 	}
 }
