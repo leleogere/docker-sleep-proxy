@@ -79,6 +79,9 @@ func (sp *SleepProxy) startContainers(ctx context.Context) error {
 }
 
 func (sp *SleepProxy) stopContainers(ctx context.Context) error {
+	sp.setStopping(true)
+	defer sp.setStopping(false)
+
 	containers, err := sp.getProjectContainers(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)

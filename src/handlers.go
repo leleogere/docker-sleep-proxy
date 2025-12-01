@@ -34,18 +34,26 @@ func processIconURL(icon string) string {
 }
 
 func (sp *SleepProxy) handleHealth(w http.ResponseWriter, r *http.Request) {
-	// Update activity to prevent timeout during startup
-	sp.updateActivity()
-
 	ctx := context.Background()
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if sp.isStoppingState() {
+		w.Write([]byte(`{"status":"stopping"}`))
+		return
+	}
+
+	if !sp.areContainersUp() {
+		w.Write([]byte(`{"status":"sleeping"}`))
+		return
+	}
+
 	if sp.checkContainersReady(ctx) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ready"}`))
 	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusServiceUnavailable)
+		// Update activity to prevent timeout during startup
+		sp.updateActivity()
 		w.Write([]byte(`{"status":"starting"}`))
 	}
 }

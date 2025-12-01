@@ -10,7 +10,9 @@ async function checkHealth() {
     try {
         const response = await fetch(`/${endpointPrefix}/health`);
         const data = await response.json();
-        
+
+        console.log('Health check status:', data.status);
+
         if (data.status === 'ready') {
             window.location.reload();
         }

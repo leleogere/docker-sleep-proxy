@@ -124,6 +124,8 @@ curl http://localhost:8000/sleep-proxy/health
 Returns:
 - `{"status":"ready"}` - Containers are running and ready
 - `{"status":"starting"}` - Containers are starting up
+- `{"status":"stopping"}` - Containers are shutting down
+- `{"status":"sleeping"}` - Containers are stopped
 
 ### Manual Shutdown
 ```bash

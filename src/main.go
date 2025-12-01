@@ -20,6 +20,7 @@ type SleepProxy struct {
 	lastActivity time.Time
 	mu           sync.RWMutex
 	containersUp bool
+	isStopping   bool
 }
 
 func NewSleepProxy(config Config) (*SleepProxy, error) {
@@ -64,6 +65,7 @@ func NewSleepProxy(config Config) (*SleepProxy, error) {
 		containerID:  hostname,
 		lastActivity: time.Now(),
 		containersUp: true,
+		isStopping:   false,
 	}
 
 	// Check if target containers are actually running
@@ -97,6 +99,18 @@ func (sp *SleepProxy) areContainersUp() bool {
 	sp.mu.RLock()
 	defer sp.mu.RUnlock()
 	return sp.containersUp
+}
+
+func (sp *SleepProxy) setStopping(stopping bool) {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
+	sp.isStopping = stopping
+}
+
+func (sp *SleepProxy) isStoppingState() bool {
+	sp.mu.RLock()
+	defer sp.mu.RUnlock()
+	return sp.isStopping
 }
 
 func (sp *SleepProxy) updateActivity() {
