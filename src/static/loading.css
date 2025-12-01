@@ -61,6 +61,10 @@ p {
     margin-left: auto;
     margin-right: auto;
     animation: pulse 3s infinite ease-in-out;
+    background-color: white;
+    border-radius: 15px;
+    padding: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes pulse {
