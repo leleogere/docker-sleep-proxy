@@ -15,8 +15,9 @@ type Config struct {
 	SleepTimeout    time.Duration
 	CheckInterval   time.Duration
 	EndpointPrefix  string
-	ExclusionLabel  string
+	AllowListMode    bool
 	DockerHost      string
+	StartupBehavior  string // "timeout" (default) or "off"
 	LoadingPageLang string
 }
 
@@ -36,6 +37,15 @@ func getEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolVal, err := strconv.ParseBool(value); err == nil {
+			return boolVal
+		}
+	}
+	return defaultValue
+}
+
 func LoadConfig() Config {
 	targetService := os.Getenv("TARGET_SERVICE")
 	if targetService == "" {
@@ -50,6 +60,11 @@ func LoadConfig() Config {
 	sleepTimeoutSec := getEnvInt("SLEEP_TIMEOUT", 86400)   // 24 hours default
 	checkIntervalSec := getEnvInt("CHECK_INTERVAL", 5)     // 5 seconds default
 
+	startupBehavior := getEnv("STARTUP_BEHAVIOR", "timeout")
+	if startupBehavior != "timeout" && startupBehavior != "off" {
+		panic("STARTUP_BEHAVIOR must be either 'timeout' or 'off'")
+	}
+
 	return Config{
 		ProxyPort:                getEnv("PROXY_PORT", "8000"),
 		TargetService:            targetService,
@@ -61,6 +76,7 @@ func LoadConfig() Config {
 		EndpointPrefix:           getEnv("ENDPOINT_PREFIX", "sleep-proxy"),
 		ExclusionLabel:           getEnv("EXCLUSION_LABEL", "sleep-proxy.exclude"),
 		DockerHost:               getEnv("DOCKER_HOST", ""),
+		StartupBehavior:          startupBehavior,
 		LoadingPageLang:          getEnv("LOADING_PAGE_LANG", "fr"),
 	}
 }

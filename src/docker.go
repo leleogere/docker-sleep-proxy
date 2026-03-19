@@ -23,7 +23,7 @@ func (sp *SleepProxy) getProjectContainers(ctx context.Context) ([]types.Contain
 		return nil, err
 	}
 
-	// Filter out the proxy itself and containers with exclusion label
+	// Filter out the proxy itself and apply allowlist/denylist logic
 	var projectContainers []types.Container
 	for _, c := range containers {
 		// Skip if it's the proxy container (check full or short ID)
@@ -31,13 +31,22 @@ func (sp *SleepProxy) getProjectContainers(ctx context.Context) ([]types.Contain
 			continue
 		}
 		
-		// Skip if container has the exclusion label
-		if _, hasLabel := c.Labels[sp.config.ExclusionLabel]; hasLabel {
-			log.Printf("Excluding container %s (has label %s)", c.Names[0], sp.config.ExclusionLabel)
-			continue
-		}
+		labelValue := c.Labels["sleep-proxy.enable"]
 		
-		projectContainers = append(projectContainers, c)
+		if sp.config.AllowListMode {
+			// Allowlist mode: only include containers explicitly set to "true"
+			if labelValue == "true" {
+				projectContainers = append(projectContainers, c)
+				log.Printf("Including container %s (allowlist mode, sleep-proxy.enable=%s)", c.Names[0], labelValue)
+			}
+		} else {
+			// Denylist mode (default): include everything except containers set to "false"
+			if labelValue != "false" {
+				projectContainers = append(projectContainers, c)
+			} else {
+				log.Printf("Excluding container %s (denylist mode, sleep-proxy.enable=%s)", c.Names[0], labelValue)
+			}
+		}
 	}
 
 	return projectContainers, nil
@@ -120,6 +129,32 @@ func (sp *SleepProxy) monitorActivity(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			// Check actual container state
+			containers, err := sp.getProjectContainers(ctx)
+			if err != nil {
+				log.Printf("Failed to get project containers: %v", err)
+				continue
+			}
+
+			// Determine if all containers are running
+			allRunning := len(containers) > 0
+			for _, c := range containers {
+				if c.State != "running" {
+					allRunning = false
+					break
+				}
+			}
+
+			// Update containersUp state if it's incorrect
+			if allRunning && !sp.areContainersUp() {
+				log.Printf("Detected containers are now running")
+				sp.setContainersUp(true)
+			} else if !allRunning && sp.areContainersUp() {
+				log.Printf("Detected containers are no longer running")
+				sp.setContainersUp(false)
+			}
+
+			// Check for timeout only if containers are running
 			if sp.areContainersUp() {
 				timeSinceActivity := time.Since(sp.getLastActivity())
 				if timeSinceActivity > sp.config.SleepTimeout {
@@ -127,6 +162,9 @@ func (sp *SleepProxy) monitorActivity(ctx context.Context) {
 						timeSinceActivity.Round(time.Second), sp.config.SleepTimeout)
 					if err := sp.stopContainers(ctx); err != nil {
 						log.Printf("Failed to stop containers: %v", err)
+					} else {
+						sp.setContainersUp(false)
+						log.Printf("Containers stopped successfully")
 					}
 				}
 			}
