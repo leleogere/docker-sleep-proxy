@@ -74,7 +74,7 @@ func LoadConfig() Config {
 		SleepTimeout:             time.Duration(sleepTimeoutSec) * time.Second,
 		CheckInterval:            time.Duration(checkIntervalSec) * time.Second,
 		EndpointPrefix:           getEnv("ENDPOINT_PREFIX", "sleep-proxy"),
-		ExclusionLabel:           getEnv("EXCLUSION_LABEL", "sleep-proxy.exclude"),
+		AllowListMode:            getEnvBool("ALLOW_LIST_MODE", false),
 		DockerHost:               getEnv("DOCKER_HOST", ""),
 		StartupBehavior:          startupBehavior,
 		LoadingPageLang:          getEnv("LOADING_PAGE_LANG", "fr"),
